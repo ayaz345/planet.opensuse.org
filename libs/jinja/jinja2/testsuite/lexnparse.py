@@ -291,7 +291,7 @@ class SyntaxTestCase(JinjaTestCase):
                 self.assert_raises(TemplateSyntaxError,
                     env.from_string, '{{ foo(%s) }}' % sig)
             else:
-                env.from_string('foo(%s)' % sig)
+                env.from_string(f'foo({sig})')
 
     def test_tuple_expr(self):
         for tmpl in [
@@ -320,7 +320,7 @@ class SyntaxTestCase(JinjaTestCase):
             tmpl = env.from_string('{{ %s }}|{{ %s }}|{{ %s }}' % (
                 str(const), str(const).lower(), str(const).upper()
             ))
-            assert tmpl.render() == '%s|%s|' % (const, const)
+            assert tmpl.render() == f'{const}|{const}|'
 
     def test_test_chaining(self):
         self.assert_raises(TemplateSyntaxError, env.from_string,
@@ -335,7 +335,7 @@ class SyntaxTestCase(JinjaTestCase):
     def test_notin(self):
         bar = xrange(100)
         tmpl = env.from_string('''{{ not 42 in bar }}''')
-        assert tmpl.render(bar=bar) == unicode(not 42 in bar)
+        assert tmpl.render(bar=bar) == unicode(42 not in bar)
 
     def test_implicit_subscribed_tuple(self):
         class Foo(object):

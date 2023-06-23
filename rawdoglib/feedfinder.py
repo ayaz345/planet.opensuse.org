@@ -76,10 +76,7 @@ except ImportError:
 
 if not dict:
     def dict(aList):
-        rc = {}
-        for k, v in aList:
-            rc[k] = v
-        return rc
+        return dict(aList)
     
 def _debuglog(message):
     if _debug: print message
@@ -108,7 +105,7 @@ class URLGatekeeper:
     def __init__(self):
         self.rpcache = {} # a dictionary of RobotFileParserFixed objects, by domain
         self.urlopener = urllib.FancyURLopener()
-        self.urlopener.version = "feedfinder/" + __version__ + " " + self.urlopener.version + " +http://diveintomark.org/projects/feed_finder/"
+        self.urlopener.version = f"feedfinder/{__version__} {self.urlopener.version} +http://diveintomark.org/projects/feed_finder/"
         _debuglog(self.urlopener.version)
         self.urlopener.addheaders = [('User-agent', self.urlopener.version)]
         robotparser.URLopener.version = self.urlopener.version
@@ -118,9 +115,9 @@ class URLGatekeeper:
         protocol, domain = urlparse.urlparse(url)[:2]
         if self.rpcache.has_key(domain):
             return self.rpcache[domain]
-        baseurl = '%s://%s' % (protocol, domain)
+        baseurl = f'{protocol}://{domain}'
         robotsurl = urlparse.urljoin(baseurl, 'robots.txt')
-        _debuglog('fetching %s' % robotsurl)
+        _debuglog(f'fetching {robotsurl}')
         rp = RobotFileParserFixed(robotsurl)
         rp.read()
         self.rpcache[domain] = rp
@@ -129,12 +126,11 @@ class URLGatekeeper:
     def can_fetch(self, url):
         rp = self._getrp(url)
         allow = rp.can_fetch(self.urlopener.version, url)
-        _debuglog("Gatekeeper examined %s and said %s" % (url, allow))
+        _debuglog(f"Gatekeeper examined {url} and said {allow}")
         return allow
 
     def get(self, url):
-        if not self.can_fetch(url): return ''
-        return self.urlopener.open(url).read()
+        return '' if not self.can_fetch(url) else self.urlopener.open(url).read()
 
 _gatekeeper = URLGatekeeper()
 
@@ -184,7 +180,7 @@ class ALinkParser(BaseParser):
 
 def makeFullURI(uri):
     if (not uri.startswith('http://')) and (not uri.startswith('https://')):
-        uri = 'http://%s' % uri
+        uri = f'http://{uri}'
     return uri
 
 def getLinks(data, baseuri):
@@ -215,7 +211,7 @@ def couldBeFeedData(data):
     return data.count('<rss') + data.count('<rdf') + data.count('<feed')
 
 def isFeed(uri):
-    _debuglog('verifying that %s is a feed' % uri)
+    _debuglog(f'verifying that {uri} is a feed')
     protocol = urlparse.urlparse(uri)
     if protocol[0] not in ('http', 'https'): return 0
     data = _gatekeeper.get(uri)
@@ -232,7 +228,7 @@ def getFeedsFromSyndic8(uri):
         infolist = server.syndic8.GetFeedInfo(feedids, ['headlines_rank','status','dataurl'])
         infolist.sort(sortFeeds)
         feeds = [f['dataurl'] for f in infolist if f['status']=='Syndicated']
-        _debuglog('found %s feeds through Syndic8' % len(feeds))
+        _debuglog(f'found {len(feeds)} feeds through Syndic8')
     except:
         pass
     return feeds
@@ -246,7 +242,7 @@ def getFeeds(uri, querySyndic8=0):
     # nope, it's a page, try LINK tags first
     _debuglog('looking for LINK tags')
     feeds = getLinks(data, fulluri)
-    _debuglog('found %s feeds through LINK tags' % len(feeds))
+    _debuglog(f'found {len(feeds)} feeds through LINK tags')
     feeds = filter(isFeed, feeds)
     if not feeds:
         # no LINK tags, look for regular <A> links that point to feeds
@@ -255,15 +251,15 @@ def getFeeds(uri, querySyndic8=0):
         locallinks = getLocalLinks(links, fulluri)
         # look for obvious feed links on the same server
         feeds = filter(isFeed, filter(isFeedLink, locallinks))
-        if not feeds:
-            # look harder for feed links on the same server
-            feeds = filter(isFeed, filter(isXMLRelatedLink, locallinks))
-        if not feeds:
-            # look for obvious feed links on another server
-            feeds = filter(isFeed, filter(isFeedLink, links))
-        if not feeds:
-            # look harder for feed links on another server
-            feeds = filter(isFeed, filter(isXMLRelatedLink, links))
+    if not feeds:
+        # look harder for feed links on the same server
+        feeds = filter(isFeed, filter(isXMLRelatedLink, locallinks))
+    if not feeds:
+        # look for obvious feed links on another server
+        feeds = filter(isFeed, filter(isFeedLink, links))
+    if not feeds:
+        # look harder for feed links on another server
+        feeds = filter(isFeed, filter(isXMLRelatedLink, links))
     if not feeds and querySyndic8:
         # still no luck, search Syndic8 for feeds (requires xmlrpclib)
         _debuglog('still no luck, searching Syndic8')

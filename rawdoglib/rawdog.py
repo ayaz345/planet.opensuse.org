@@ -39,17 +39,17 @@ try:
 except:
 	have_threading = 0
 
-fixes = []
-fixes.append(r'<div\s+[^<>/]*class="lightsocial_container".+</\s*div>')
-fixes.append(r'<!--\s*BlogCounter\s+Code\s+START\s*-->.*?<!--\s*BlogCounter\s+Code\s+END\s*-->')
-fixes.append(r'<a\s+[^<>/]*?href="http.*?://.*?\.blogcounter\.de.*?</\s*a>')
-fixes.append(r'<img\s+[^<>/]*?src="https?://blogger\.googleusercontent\.com/tracker/.+".+height="1".*?/?\s*>')
-fixes.append(r'<div\s+[^<>/]*?class="feedflare".*?>.+?</\s*div>')
-fixes.append(r'<a\s+[^<>/]*?href="https?://feeds\.wordpress\.com/\d+\.\d+/.*?(gocomments|comments|delicious|stumble|digg|reddit)/.+?</\s*a>')
-fixes.append(r'<img\s+[^<>/]*?src="https?://stats\.wordpress\.com.+?"\s*/?\s*>')
-fixes.append(r'<a\s+[^<>/]*?href="https?://feeds\.feedburner\.com/~ff/.+?".+?</\s*a>')
-fixes.append(r'<img\s+[^<>/]*?src="https?://feeds\.feedburner\.com/~ff/.+?".+?>')
-
+fixes = [
+	'<div\s+[^<>/]*class="lightsocial_container".+</\s*div>',
+	'<!--\s*BlogCounter\s+Code\s+START\s*-->.*?<!--\s*BlogCounter\s+Code\s+END\s*-->',
+	'<a\s+[^<>/]*?href="http.*?://.*?\.blogcounter\.de.*?</\s*a>',
+	'<img\s+[^<>/]*?src="https?://blogger\.googleusercontent\.com/tracker/.+".+height="1".*?/?\s*>',
+	'<div\s+[^<>/]*?class="feedflare".*?>.+?</\s*div>',
+	'<a\s+[^<>/]*?href="https?://feeds\.wordpress\.com/\d+\.\d+/.*?(gocomments|comments|delicious|stumble|digg|reddit)/.+?</\s*a>',
+	'<img\s+[^<>/]*?src="https?://stats\.wordpress\.com.+?"\s*/?\s*>',
+	'<a\s+[^<>/]*?href="https?://feeds\.feedburner\.com/~ff/.+?".+?</\s*a>',
+	'<img\s+[^<>/]*?src="https?://feeds\.feedburner\.com/~ff/.+?".+?>',
+]
 fixes = [re.compile(x, re.I+re.S+re.M) for x in fixes]
 
 translations = None
@@ -77,7 +77,7 @@ def encode_references(s):
 	for c in s:
 		n = ord(c)
 		if n >= 128:
-			r.write("&#" + str(n) + ";")
+			r.write(f"&#{n};")
 		else:
 			r.write(c)
 	v = r.getvalue()
@@ -110,7 +110,7 @@ def sanitise_html(html, baseurl, inline, config, type):
 		# a block-level element, then more text, but it's better than
 		# nothing.
 		if block_level_re.match(html) is None:
-			html = "<p>" + html
+			html = f"<p>{html}"
 
 	if config["tidyhtml"]:
 		import mx.Tidy
@@ -143,18 +143,12 @@ def select_detail(details):
 		ctype = detail.get("type", None)
 		if ctype is None:
 			continue
-		if types.has_key(ctype):
-			score = types[ctype]
-		else:
-			score = 0
+		score = types[ctype] if types.has_key(ctype) else 0
 		if detail["value"] != "":
 			ds.append((score, detail))
 	ds.sort()
 
-	if len(ds) == 0:
-		return None
-	else:
-		return ds[-1][1]
+	return None if not ds else ds[-1][1]
 
 def detail_to_html(details, inline, config, force_preformatted = False):
 	"""Convert a detail hash or list of detail hashes as returned by
@@ -228,7 +222,6 @@ def load_file(name, config):
 
 def write_utf8(f, s, config):
 	f.write(s.encode("UTF-8"))
-	pass
 
 def short_hash(s):
 	"""Return a human-manipulatable 'short hash' of a string."""
@@ -272,10 +265,7 @@ class Feed:
 	def needs_update(self, now):
 		"""Return 1 if it's time to update this feed, or 0 if its
 		update period has not yet elapsed."""
-		if (now - self.last_update) < self.period:
-			return 0
-		else:
-			return 1
+		return 0 if (now - self.last_update) < self.period else 1
 
 	def fetch(self, rawdog, config):
 		"""Fetch the current set of articles from the feed."""
@@ -454,9 +444,8 @@ class Feed:
 	def get_id(self, config):
 		if self.args.has_key("id"):
 			return self.args["id"]
-		else:
-			r = self.get_html_name(config).lower()
-			return non_alphanumeric_re.sub('', r)
+		r = self.get_html_name(config).lower()
+		return non_alphanumeric_re.sub('', r)
 
 	def get_keepmin(self, config):
 		try:
@@ -501,8 +490,6 @@ class Article:
 		for k in ('title', 'link'):
 			if k in entry_info:
 				add_hash(entry_info[k])
-				pass
-			pass
 		if entry_info.has_key("content"):
 			for content in entry_info["content"]:
 				#add_hash(content["value_raw"])
@@ -573,21 +560,25 @@ def parse_time(value, default = "m"):
 	the default argument to change this. Raises ValueError if the format
 	isn't recognised."""
 	units = { "s" : 1, "m" : 60, "h" : 3600, "d" : 86400, "w" : 604800 }
-	for unit, size in units.items():
-		if value.endswith(unit):
-			return int(value[:-len(unit)]) * size
-	return int(value) * units[default]
+	return next(
+		(
+			int(value[: -len(unit)]) * size
+			for unit, size in units.items()
+			if value.endswith(unit)
+		),
+		int(value) * units[default],
+	)
 
 def parse_bool(value):
 	"""Parse a boolean value (0, 1, false or true). Raise ValueError if
 	the value isn't recognised."""
 	value = value.strip().lower()
-	if value == "0" or value == "false":
+	if value in ["0", "false"]:
 		return 0
-	elif value == "1" or value == "true":
+	elif value in ["1", "true"]:
 		return 1
 	else:
-		raise ValueError("Bad boolean value: " + value)
+		raise ValueError(f"Bad boolean value: {value}")
 
 def parse_list(value):
 	"""Parse a list of keywords separated by whitespace."""
@@ -599,25 +590,23 @@ def parse_feed_args(argparams, arglines):
 	for a in argparams:
 		asplit = a.split(u"=", 1)
 		if len(asplit) != 2:
-			raise ConfigError("Bad feed argument in config: " + a)
+			raise ConfigError(f"Bad feed argument in config: {a}")
 		args[asplit[0]] = asplit[1]
 	for a in arglines:
 		asplit = a.split(None, 1)
 		if len(asplit) != 2:
-			raise ConfigError("Bad argument line in config: " + a)
+			raise ConfigError(f"Bad argument line in config: {a}")
 		args[asplit[0]] = asplit[1]
 	if "maxage" in args:
 		args["maxage"] = parse_time(args["maxage"])
 	# post-process args
 	if "define_face" in args:
 		face = args["define_face"]
-		if not '.' in face:
+		if '.' not in face:
 			face += u".png"
-		if not '/' in face:
-			face = u"../hackergotchi/" + face
+		if '/' not in face:
+			face = f"../hackergotchi/{face}"
 		args["define_face"] = face
-		pass
-
 	return args
 
 class ConfigError(Exception): pass
@@ -691,20 +680,20 @@ class Config:
 				if stripped == "" or stripped[0] == "#":
 					continue
 				if line[0] in string.whitespace:
-					if lines == []:
+					if not lines:
 						raise ConfigError("First line in config cannot be an argument")
 					lines[-1][1].append(stripped)
 				else:
 					lines.append((stripped, []))
 			f.close()
 		except IOError:
-			raise ConfigError("Can't read config file: " + filename)
+			raise ConfigError(f"Can't read config file: {filename}")
 
 		for line, arglines in lines:
 			try:
 				self.load_line(line, arglines)
 			except ValueError:
-				raise ConfigError("Bad value in config: " + line)
+				raise ConfigError(f"Bad value in config: {line}")
 
 	def load_line(self, line, arglines):
 		"""Process a configuration directive."""
@@ -713,13 +702,13 @@ class Config:
 		if len(l) == 1 and l[0] == "feeddefaults":
 			l.append("")
 		elif len(l) != 2:
-			raise ConfigError("Bad line in config: " + line)
+			raise ConfigError(f"Bad line in config: {line}")
 
 		handled_arglines = False
 		if l[0] == "feed":
 			l = l[1].split(None)
 			if len(l) < 2:
-				raise ConfigError("Bad line in config: " + line)
+				raise ConfigError(f"Bad line in config: {line}")
 			self["feedslist"].append((l[1], parse_time(l[0]), parse_feed_args(l[2:], arglines)))
 			handled_arglines = True
 		elif l[0] == "feeddefaults":
@@ -728,7 +717,7 @@ class Config:
 		elif l[0] == "define":
 			l = l[1].split(None, 1)
 			if len(l) != 2:
-				raise ConfigError("Bad line in config: " + line)
+				raise ConfigError(f"Bad line in config: {line}")
 			self["defines"][l[0]] = l[1]
 		elif l[0] == "plugindirs":
 			for dir in parse_list(l[1]):
@@ -789,13 +778,11 @@ class Config:
 			self.load(os.path.join(self.basedir, l[1]), False)
 		elif plugins.call_hook("config_option_arglines", self, l[0], l[1], arglines):
 			handled_arglines = True
-		elif plugins.call_hook("config_option", self, l[0], l[1]):
-			pass
-		else:
-			raise ConfigError("Unknown config command: " + l[0])
+		elif not plugins.call_hook("config_option", self, l[0], l[1]):
+			raise ConfigError(f"Unknown config command: {l[0]}")
 
 		if arglines != [] and not handled_arglines:
-			raise ConfigError("Bad argument lines in config after: " + line)
+			raise ConfigError(f"Bad argument lines in config after: {line}")
 
 	def log(self, *args):
 		"""If running in verbose mode, print a status message."""
@@ -818,11 +805,9 @@ def edit_file(filename, editfunc):
 	editfunc(line, outputfile), then rename the output file over the input
 	file."""
 	newname = "%s.new-%d" % (filename, os.getpid())
-	oldfile = open(filename, "r")
-	newfile = open(newname, "w")
-	editfunc(oldfile, newfile)
-	newfile.close()
-	oldfile.close()
+	with open(filename, "r") as oldfile:
+		with open(newname, "w") as newfile:
+			editfunc(oldfile, newfile)
 	os.rename(newname, filename)
 
 class AddFeedEditor:
@@ -1020,7 +1005,7 @@ class Rawdog(Persistable):
 				feed.period = period
 				self.modified()
 			newargs = {}
-			newargs.update(config["feeddefaults"])
+			newargs |= config["feeddefaults"]
 			newargs.update(args)
 			if feed.args != newargs:
 				config.log("Changed feed options: ", url)
@@ -1171,11 +1156,10 @@ class Rawdog(Persistable):
 	def get_main_template_bits(self, config):
 		"""Get the bits that are used in the default main template,
 		with the exception of items and num_items."""
-		bits = {}
-		bits["version"] = VERSION
+		bits = {"version": VERSION}
 		for k, v in config.config.iteritems():
 			bits[k] = v
-		bits.update(config["defines"])
+		bits |= config["defines"]
 
 		refresh = config["expireage"]
 		for feed in self.feeds.values():

@@ -48,10 +48,9 @@ def load_plugins(dir, config):
 
 		fn = os.path.join(dir, file)
 		config.log("Loading plugin ", fn)
-		f = open(fn, "r")
-		mod = imp.load_module("plugin%d" % (plugin_count,), f, fn, desc)
-		plugin_count += 1
-		f.close()
+		with open(fn, "r") as f:
+			mod = imp.load_module("plugin%d" % (plugin_count,), f, fn, desc)
+			plugin_count += 1
 
 attached = {}
 
@@ -66,8 +65,5 @@ def call_hook(hookname, *args):
 	arguments, in the order they were added, stopping if a hook function
 	returns False. Returns True if any hook function returned False (i.e.
 	returns True if any hook function handled the request)."""
-	for func in attached.get(hookname, []):
-		if not func(*args):
-			return True
-	return False
+	return any(not func(*args) for func in attached.get(hookname, []))
 

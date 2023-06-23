@@ -10,6 +10,7 @@
     :copyright: (c) 2010 by the Jinja Team.
     :license: BSD, see LICENSE for more details.
 """
+
 import os
 import re
 import sys
@@ -24,7 +25,7 @@ dict_loader = loaders.DictLoader({
     'justdict.html':        'FOO'
 })
 package_loader = loaders.PackageLoader('jinja2.testsuite.res', 'templates')
-filesystem_loader = loaders.FileSystemLoader(here + '/res/templates')
+filesystem_loader = loaders.FileSystemLoader(f'{here}/res/templates')
 function_loader = loaders.FunctionLoader({'justfunction.html': 'FOO'}.get)
 choice_loader = loaders.ChoiceLoader([dict_loader, package_loader])
 prefix_loader = loaders.PrefixLoader({

@@ -46,7 +46,6 @@ _concat = u''.join
 try:
     def _test_gen_bug():
         raise TypeError(_test_gen_bug)
-        yield None
     _concat(_test_gen_bug())
 except TypeError, _error:
     if not _error.args or _error.args[0] is not _test_gen_bug:
@@ -79,9 +78,7 @@ except NameError:
 # 3.x because compile cannot handle bytes
 if sys.version_info < (3, 0):
     def _encode_filename(filename):
-        if isinstance(filename, unicode):
-            return filename.encode('utf-8')
-        return filename
+        return filename.encode('utf-8') if isinstance(filename, unicode) else filename
 else:
     def _encode_filename(filename):
         assert filename is None or isinstance(filename, str), \
@@ -161,8 +158,6 @@ def is_undefined(obj):
 
 def consume(iterable):
     """Consumes an iterable without doing anything with it."""
-    for event in iterable:
-        pass
 
 
 def clear_caches():
@@ -242,10 +237,9 @@ def urlize(text, trim_url_limit=None, nofollow=False):
                          and (x[:limit] + (len(x) >=limit and '...'
                          or '')) or x
     words = _word_split_re.split(unicode(escape(text)))
-    nofollow_attr = nofollow and ' rel="nofollow"' or ''
+    nofollow_attr = ' rel="nofollow"' if nofollow else ''
     for i, word in enumerate(words):
-        match = _punctuation_re.match(word)
-        if match:
+        if match := _punctuation_re.match(word):
             lead, middle, trail = match.groups()
             if middle.startswith('www.') or (
                 '@' not in middle and
@@ -256,15 +250,17 @@ def urlize(text, trim_url_limit=None, nofollow=False):
                     middle.endswith('.net') or
                     middle.endswith('.com')
                 )):
-                middle = '<a href="http://%s"%s>%s</a>' % (middle,
-                    nofollow_attr, trim_url(middle))
+                middle = f'<a href="http://{middle}"{nofollow_attr}>{trim_url(middle)}</a>'
             if middle.startswith('http://') or \
                middle.startswith('https://'):
-                middle = '<a href="%s"%s>%s</a>' % (middle,
-                    nofollow_attr, trim_url(middle))
-            if '@' in middle and not middle.startswith('www.') and \
-               not ':' in middle and _simple_email_re.match(middle):
-                middle = '<a href="mailto:%s">%s</a>' % (middle, middle)
+                middle = f'<a href="{middle}"{nofollow_attr}>{trim_url(middle)}</a>'
+            if (
+                '@' in middle
+                and not middle.startswith('www.')
+                and ':' not in middle
+                and _simple_email_re.match(middle)
+            ):
+                middle = f'<a href="mailto:{middle}">{middle}</a>'
             if lead + middle + trail != word:
                 words[i] = lead + middle + trail
     return u''.join(words)
@@ -309,14 +305,14 @@ def generate_lorem_ipsum(n=5, html=True, min=20, max=100):
         # ensure that the paragraph ends with a dot.
         p = u' '.join(p)
         if p.endswith(','):
-            p = p[:-1] + '.'
+            p = f'{p[:-1]}.'
         elif not p.endswith('.'):
             p += '.'
         result.append(p)
 
     if not html:
         return u'\n\n'.join(result)
-    return Markup(u'\n'.join(u'<p>%s</p>' % escape(x) for x in result))
+    return Markup(u'\n'.join(f'<p>{escape(x)}</p>' for x in result))
 
 
 class Markup(unicode):
@@ -399,10 +395,7 @@ class Markup(unicode):
         return self.__class__(unicode.__mod__(self, arg))
 
     def __repr__(self):
-        return '%s(%s)' % (
-            self.__class__.__name__,
-            unicode.__repr__(self)
-        )
+        return f'{self.__class__.__name__}({unicode.__repr__(self)})'
 
     def join(self, seq):
         return self.__class__(unicode.join(self, imap(escape, seq)))
@@ -460,9 +453,7 @@ class Markup(unicode):
         correct subclass.
         """
         rv = escape(s)
-        if rv.__class__ is not cls:
-            return cls(rv)
-        return rv
+        return cls(rv) if rv.__class__ is not cls else rv
 
     def make_wrapper(name):
         orig = getattr(unicode, name)
@@ -727,9 +718,8 @@ class Cycler(object):
 
     def next(self):
         """Goes one item ahead and returns it."""
-        rv = self.current
         self.pos = (self.pos + 1) % len(self.items)
-        return rv
+        return self.current
 
 
 class Joiner(object):
@@ -785,5 +775,5 @@ except ImportError:
             self._args = args
             self._kwargs = kwargs
         def __call__(self, *args, **kwargs):
-            kwargs.update(self._kwargs)
+            kwargs |= self._kwargs
             return self._func(*(self._args + args), **kwargs)

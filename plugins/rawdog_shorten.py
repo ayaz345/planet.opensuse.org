@@ -16,8 +16,6 @@ class Shorten:
                 readmore = rawdoglib.rawdog.translations.gettext('read more').decode("utf8")
                 sh += "\n<div class=\"readmore\"><a href=\"%s\" class=\"readmore\">%s</a></div>" % (link, readmore)
                 box.value = sh
-                pass
-            pass
         return True
 
 def startup(rawdog, config):

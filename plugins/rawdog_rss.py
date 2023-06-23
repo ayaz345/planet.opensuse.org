@@ -36,7 +36,7 @@ class RSS_Feed:
         self.xml_articles.newChild(None, 'link', link)
         if config.lang:
             self.xml_articles.newChild(None, 'language', config.lang)
-        self.xml_articles.newChild(None, 'description', "Planet openSUSE - " + link)
+        self.xml_articles.newChild(None, 'description', f"Planet openSUSE - {link}")
         atomLink = self.xml_articles.newChild(None, 'atom:link', None)
 
         if 'linkxml' in config.config:
@@ -109,7 +109,7 @@ class RSS_Feed:
 
     def __article_sync(self, xml_article, rawdog, config, article):
         entry_info = article.entry_info
-	guid = xml_article.newChild(None, 'guid', article.hash)
+        guid = xml_article.newChild(None, 'guid', article.hash)
         guid.setProp('isPermaLink', 'false')
         if 'title' in entry_info:
             title = unicode(entry_info['title'].encode('utf8'), 'utf8') #, 'ignore')
@@ -125,7 +125,6 @@ class RSS_Feed:
             date = strftime("%a, %d %b %Y %H:%M:%S", gmtime(article.date)) + " +0000"
         finally:
             locale.setlocale(locale.LC_TIME, actual_locale)
-            pass
         xml_article.newChild(None, 'pubDate', date)
         if entry_info.has_key('link'):
             try:

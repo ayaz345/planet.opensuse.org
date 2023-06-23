@@ -11,6 +11,7 @@ Recommended: Python 2.3 or later
 Recommended: CJKCodecs and iconv_codec <http://cjkpython.i18n.org/>
 """
 
+
 __version__ = "4.2-pre-" + "$Revision: 308 $"[11:14] + "-svn"
 __license__ = """Copyright (c) 2002-2008, Mark Pilgrim, All rights reserved.
 
@@ -47,7 +48,7 @@ _debug = 0
 # HTTP "User-Agent" header to send to servers when downloading feeds.
 # If you are embedding feedparser in a larger application, you should
 # change this to your application name and URL.
-USER_AGENT = "UniversalFeedParser/%s +http://feedparser.org/" % __version__
+USER_AGENT = f"UniversalFeedParser/{__version__} +http://feedparser.org/"
 
 # HTTP "Accept" header to send to servers when downloading feeds.  If you don't
 # want to send an Accept header, set this to None.
@@ -208,10 +209,7 @@ except NameError:
     # Python 2.1 does not have dict
     from UserDict import UserDict
     def dict(aList):
-        rc = {}
-        for k, v in aList:
-            rc[k] = v
-        return rc
+        return dict(aList)
 
 class FeedParserDict(UserDict):
     keymap = {'channel': 'feed',
@@ -259,10 +257,7 @@ class FeedParserDict(UserDict):
         return UserDict.__setitem__(self, key, value)
 
     def get(self, key, default=None):
-        if self.has_key(key):
-            return self[key]
-        else:
-            return default
+        return self[key] if self.has_key(key) else default
 
     def setdefault(self, key, value):
         if not self.has_key(key):
@@ -284,7 +279,7 @@ class FeedParserDict(UserDict):
             assert not key.startswith('_')
             return self.__getitem__(key)
         except:
-            raise AttributeError, "object has no attribute '%s'" % key
+            raise (AttributeError, f"object has no attribute '{key}'")
 
     def __setattr__(self, key, value):
         if key.startswith('_') or key == 'data':
@@ -605,12 +600,9 @@ class _FeedParserMixin:
         if not self.elementstack: return
         ref = ref.lower()
         if ref in ('34', '38', '39', '60', '62', 'x22', 'x26', 'x27', 'x3c', 'x3e'):
-            text = '&#%s;' % ref
+            text = f'&#{ref};'
         else:
-            if ref[0] == 'x':
-                c = int(ref[1:], 16)
-            else:
-                c = int(ref)
+            c = int(ref[1:], 16) if ref[0] == 'x' else int(ref)
             text = unichr(c).encode('utf-8')
         self.elementstack[-1][2].append(text)
 
@@ -619,14 +611,15 @@ class _FeedParserMixin:
         if not self.elementstack: return
         if _debug: sys.stderr.write('entering handle_entityref with %s\n' % ref)
         if ref in ('lt', 'gt', 'quot', 'amp', 'apos'):
-            text = '&%s;' % ref
+            text = f'&{ref};'
         elif ref in self.entities.keys():
             text = self.entities[ref]
             if text.startswith('&#') and text.endswith(';'):
                 return self.handle_entityref(text)
         else:
             try: name2codepoint[ref]
-            except KeyError: text = '&%s;' % ref
+            except KeyError:
+                text = f'&{ref};'
             else: text = unichr(name2codepoint[ref]).encode('utf-8')
         self.elementstack[-1][2].append(text)
 
@@ -662,11 +655,7 @@ class _FeedParserMixin:
             return k+3
         else:
             k = self.rawdata.find('>', i)
-            if k >= 0:
-                return k+1
-            else:
-                # We have an incomplete CDATA block.
-                return k
+            return k+1 if k >= 0 else k
 
     def mapContentType(self, contentType):
         contentType = contentType.lower()

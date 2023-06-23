@@ -142,10 +142,7 @@ class Timeout(Exception):
 from socket import AF_INET, SOCK_STREAM
 def timeoutsocket(family=AF_INET, type=SOCK_STREAM, proto=None):
     if family != AF_INET or type != SOCK_STREAM:
-        if proto:
-            return _socket(family, type, proto)
-        else:
-            return _socket(family, type)
+        return _socket(family, type, proto) if proto else _socket(family, type)
     return TimeoutSocket( _socket(family, type), _DefaultTimeout )
 # end timeoutsocket
 
@@ -350,10 +347,10 @@ class TimeoutFile:
             bufsize = _bufsize
             if size > 0:
                 bufsize = min(bufsize, size - datalen )
-            buf = self.recv(bufsize)
-            if not buf:
+            if buf := self.recv(bufsize):
+                _sock._inqueue = _sock._inqueue + buf
+            else:
                 break
-            _sock._inqueue = _sock._inqueue + buf
         data = _sock._inqueue
         _sock._inqueue = ""
         if size > 0 and datalen > size:
@@ -375,11 +372,11 @@ class TimeoutFile:
             bufsize = _bufsize
             if size > 0:
                 bufsize = min(bufsize, size - datalen )
-            buf = self.recv(bufsize)
-            if not buf:
-                break
-            _sock._inqueue = _sock._inqueue + buf
+            if buf := self.recv(bufsize):
+                _sock._inqueue = _sock._inqueue + buf
 
+            else:
+                break
         data = _sock._inqueue
         _sock._inqueue = ""
         if idx >= 0:

@@ -128,7 +128,7 @@ def translate_exception(exc_info, initial_skip=0):
     frames = []
 
     # skip some internal frames if wanted
-    for x in xrange(initial_skip):
+    for _ in xrange(initial_skip):
         if tb is not None:
             tb = tb.tb_next
     initial_tb = tb

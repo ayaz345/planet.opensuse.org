@@ -75,20 +75,20 @@ class MetaTestCase(JinjaTestCase):
     def test_find_undeclared_variables(self):
         ast = env.parse('{% set foo = 42 %}{{ bar + foo }}')
         x = meta.find_undeclared_variables(ast)
-        assert x == set(['bar'])
+        assert x == {'bar'}
 
         ast = env.parse('{% set foo = 42 %}{{ bar + foo }}'
                         '{% macro meh(x) %}{{ x }}{% endmacro %}'
                         '{% for item in seq %}{{ muh(item) + meh(seq) }}{% endfor %}')
         x = meta.find_undeclared_variables(ast)
-        assert x == set(['bar', 'seq', 'muh'])
+        assert x == {'bar', 'seq', 'muh'}
 
     def test_find_refererenced_templates(self):
         ast = env.parse('{% extends "layout.html" %}{% include helper %}')
         i = meta.find_referenced_templates(ast)
         assert i.next() == 'layout.html'
         assert i.next() is None
-        assert list(i) == []
+        assert not list(i)
 
         ast = env.parse('{% extends "layout.html" %}'
                         '{% from "test.html" import a, b as c %}'

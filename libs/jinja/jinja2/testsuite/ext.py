@@ -83,20 +83,22 @@ class TestExtension(Extension):
     ext_attr = 42
 
     def parse(self, parser):
-        return nodes.Output([self.call_method('_dump', [
-            nodes.EnvironmentAttribute('sandboxed'),
-            self.attr('ext_attr'),
-            nodes.ImportedName(__name__ + '.importable_object'),
-            nodes.ContextReference()
-        ])]).set_lineno(next(parser.stream).lineno)
+        return nodes.Output(
+            [
+                self.call_method(
+                    '_dump',
+                    [
+                        nodes.EnvironmentAttribute('sandboxed'),
+                        self.attr('ext_attr'),
+                        nodes.ImportedName(f'{__name__}.importable_object'),
+                        nodes.ContextReference(),
+                    ],
+                )
+            ]
+        ).set_lineno(next(parser.stream).lineno)
 
     def _dump(self, sandboxed, ext_attr, imported_object, context):
-        return '%s|%s|%s|%s' % (
-            sandboxed,
-            ext_attr,
-            imported_object,
-            context.blocks
-        )
+        return f'{sandboxed}|{ext_attr}|{imported_object}|{context.blocks}'
 
 
 class PreprocessorExtension(Extension):
@@ -110,8 +112,7 @@ class StreamFilterExtension(Extension):
     def filter_stream(self, stream):
         for token in stream:
             if token.type == 'data':
-                for t in self.interpolate(token):
-                    yield t
+                yield from self.interpolate(token)
             else:
                 yield token
 
@@ -123,8 +124,7 @@ class StreamFilterExtension(Extension):
             match = _gettext_re.search(token.value, pos)
             if match is None:
                 break
-            value = token.value[pos:match.start()]
-            if value:
+            if value := token.value[pos : match.start()]:
                 yield Token(lineno, 'data', value)
             lineno += count_newlines(token.value)
             yield Token(lineno, 'variable_begin', None)
@@ -183,7 +183,7 @@ class ExtensionsTestCase(JinjaTestCase):
         assert tmpl.render() == 'False|42|23|{}'
 
     def test_identifier(self):
-        assert TestExtension.identifier == __name__ + '.TestExtension'
+        assert TestExtension.identifier == f'{__name__}.TestExtension'
 
     def test_rebinding(self):
         original = Environment(extensions=[TestExtension])

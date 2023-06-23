@@ -14,6 +14,7 @@
     :copyright: (c) 2010 by the Jinja Team.
     :license: BSD, see LICENSE for more details.
 """
+
 import re
 from operator import itemgetter
 from collections import deque
@@ -39,8 +40,7 @@ except SyntaxError:
     name_re = re.compile(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b')
 else:
     from jinja2 import _stringdefs
-    name_re = re.compile(r'[%s][%s]*' % (_stringdefs.xid_start,
-                                         _stringdefs.xid_continue))
+    name_re = re.compile(f'[{_stringdefs.xid_start}][{_stringdefs.xid_continue}]*')
 
 float_re = re.compile(r'(?<!\.)\d+\.\d+')
 newline_re = re.compile(r'(\r\n|\r|\n)')
@@ -249,10 +249,7 @@ class Token(tuple):
 
     def test_any(self, *iterable):
         """Test against multiple token expressions."""
-        for expr in iterable:
-            if self.test(expr):
-                return True
-        return False
+        return any(self.test(expr) for expr in iterable)
 
     def __repr__(self):
         return 'Token(%r, %r, %r)' % (
@@ -319,7 +316,7 @@ class TokenStream(object):
 
     def skip(self, n=1):
         """Got n tokens ahead."""
-        for x in xrange(n):
+        for _ in xrange(n):
             next(self)
 
     def next_if(self, expr):
@@ -423,7 +420,7 @@ class Lexer(object):
         root_tag_rules = compile_rules(environment)
 
         # block suffix if trimming is enabled
-        block_suffix_re = environment.trim_blocks and '\\n?' or ''
+        block_suffix_re = '\\n?' if environment.trim_blocks else ''
 
         self.newline_sequence = environment.newline_sequence
 
@@ -554,7 +551,7 @@ class Lexer(object):
         stack = ['root']
         if state is not None and state != 'root':
             assert state in ('variable', 'block'), 'invalid state'
-            stack.append(state + '_begin')
+            stack.append(f'{state}_begin')
         else:
             state = 'root'
         statetokens = self.rules[stack[-1]]
@@ -575,7 +572,7 @@ class Lexer(object):
                 # is the operator rule. do this only if the end tags look
                 # like operators
                 if balancing_stack and \
-                   tokens in ('variable_end', 'block_end',
+                       tokens in ('variable_end', 'block_end',
                               'linestatement_end'):
                     continue
 

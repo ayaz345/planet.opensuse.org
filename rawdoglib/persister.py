@@ -59,14 +59,13 @@ class Persister:
 		"""Save the persisted object back to the file if necessary."""
 		if self.object.is_modified():
 			newname = "%s.new-%d" % (self.filename, os.getpid())
-			newfile = open(newname, "w")
-			try:
-				pickle.dump(self.object, newfile, pickle.HIGHEST_PROTOCOL)
-			except AttributeError:
-				# Python 2.2 doesn't have the protocol
-				# argument.
-				pickle.dump(self.object, newfile, True)
-			newfile.close()
+			with open(newname, "w") as newfile:
+				try:
+					pickle.dump(self.object, newfile, pickle.HIGHEST_PROTOCOL)
+				except AttributeError:
+					# Python 2.2 doesn't have the protocol
+					# argument.
+					pickle.dump(self.object, newfile, True)
 			os.rename(newname, self.filename)
 		self.file.close()
 

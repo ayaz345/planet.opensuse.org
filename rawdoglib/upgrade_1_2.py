@@ -27,9 +27,7 @@ def format_time(secs):
 
 def approximately_equal(a, b):
 	"""Return whether two strings are approximately equal."""
-	if a == b:
-		return True
-	return difflib.get_close_matches(a, [b], 1, 0.6) != []
+	return True if a == b else difflib.get_close_matches(a, [b], 1, 0.6) != []
 
 def upgrade(olddir, newdir):
 	"""Given a rawdog 1.x state directory and a rawdog 2.x state directory,

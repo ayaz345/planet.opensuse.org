@@ -27,14 +27,14 @@ def truncate_html_words(s, num, end_text='...'):
             # Checked through whole string
             break
         pos = m.end(0)
-        if m.group(1):
+        if m[1]:
             # It's an actual non-HTML word
             words += 1
             if words == length:
                 end_text_pos = pos
             continue
         # Check for tag
-        tag = re_tag.match(m.group(0))
+        tag = re_tag.match(m[0])
         if not tag or end_text_pos:
             # Don't worry about non tags or tags after our truncate point
             continue
@@ -59,10 +59,10 @@ def truncate_html_words(s, num, end_text='...'):
         return s
     out = s[:end_text_pos]
     if end_text:
-        out += ' ' + end_text
+        out += f' {end_text}'
     # Close any tags still open
     for tag in open_tags:
-        out += '</%s>' % tag
+        out += f'</{tag}>'
     # Return string
     return out
 
